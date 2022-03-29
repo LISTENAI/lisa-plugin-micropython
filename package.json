@@ -1,0 +1,55 @@
+{
+  "name": "@lisa-plugin/micropython",
+  "version": "0.0.1",
+  "description": "Lisa plugin for MicroPython with zephyr development",
+  "main": "./lib/main.js",
+  "lisa": {
+    "friendlyName": "mpy",
+    "taskPath": "./lib/tasks"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "postinstall": "lisa mpy install",
+    "format-code": "prettier --write ./src"
+  },
+  "keywords": [
+    "lisa",
+    "micropython",
+    "zephyr"
+  ],
+  "author": "LISTENAI",
+  "maintainers": [
+    "lpmadmin <lpm.admin@listenai.com>",
+    "xychen <xychen@listenai.com>",
+    "zbzhao <zbzhao@listenai.com>",
+    "xryu <xryu@listenai.com>"
+  ],
+  "license": "ISC",
+  "files": [
+    "lib",
+    "scripts"
+  ],
+  "bugs": {
+    "url": "https://github.com/LISTENAI/lisa-plugin-micropython/issues"
+  },
+  "homepage": "https://github.com/LISTENAI/lisa-plugin-micropython#readme",
+  "dependencies": {
+    "@binary/dtc": "^1.1.2-1.6.0",
+    "@binary/mklfs": "^1.0.1-1.0.0",
+    "@binary/python-3.9": "^2.0.2-3.9.7",
+    "@binary/type": "^1.0.4",
+    "@lisa-env/type": "^1.2.0",
+    "@listenai/lisa_core": "^2.0.5",
+    "lodash": "^4.17.21",
+    "simple-git": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.180",
+    "@types/minimist": "^1.2.2",
+    "@types/node": "^16.11.1",
+    "prettier": "^2.6.0",
+    "typescript": "^4.6.2"
+  }
+}
