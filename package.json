@@ -29,7 +29,8 @@
   "license": "ISC",
   "files": [
     "lib",
-    "scripts"
+    "scripts",
+    "template"
   ],
   "bugs": {
     "url": "https://github.com/LISTENAI/lisa-plugin-micropython/issues"
