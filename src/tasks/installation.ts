@@ -29,6 +29,9 @@ export default ({ cmd }: LisaType) => {
       await exec('python', ['-m', 'pip', 'install', 'mpremote'], {
         env: await getEnv(),
       });
+      await exec('python', ['-m', 'pip', 'install', 'mpy-cross'], {
+        env: await getEnv(),
+      });
 
       await invalidateEnv();
     },
