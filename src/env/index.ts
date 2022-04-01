@@ -139,6 +139,8 @@ async function makeEnv(override?: string): Promise<Record<string, string>> {
     env['MICROPY_SDK'] = sdk;
   }
 
+  env['MICROPY_MPYCROSS'] = join(PLUGIN_HOME, 'venv', 'bin', 'mpy-cross');
+
   Object.assign(env, {
     PIP_INDEX_URL,
   });

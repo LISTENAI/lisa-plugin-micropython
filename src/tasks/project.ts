@@ -26,6 +26,7 @@ export default ({ application, cmd, runner }: LisaType) => {
     async task(ctx, task) {
       task.title = '';
       const { args, printHelp } = parseArgs(application.argv, {
+        'firmware-only': { help: '仅烧录固件' },
         'fs-only': { help: '仅烧录文件系统' },
         'task-help': { short: 'h', help: '打印帮助' },
       });
@@ -33,8 +34,11 @@ export default ({ application, cmd, runner }: LisaType) => {
         printHelp();
         return;
       }
+      if (args['firmware-only'] && args['fs-only']) {
+        throw new Error('不能同时使用 --fs-only 和 --firmware-only');
+      }
       if (!args['fs-only']) {
-        const argv = process.argv.slice(3);
+        const argv = process.argv.slice(3).filter(arg => arg !== '--firmware-only');
         const env = Object.assign(await getEnv(), await getZepEnv());
         application.debug(env);
         await cmd('python', ['-m', 'west', ...argv], {
@@ -43,7 +47,9 @@ export default ({ application, cmd, runner }: LisaType) => {
         });
       }
 
-      await runner('fs:flash');
+      if (!args['firmware-only']) {
+        await runner('fs:flash');
+      }
     },
   });
 };
