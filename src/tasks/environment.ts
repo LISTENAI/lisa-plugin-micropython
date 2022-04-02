@@ -1,22 +1,11 @@
-import { LisaType, job } from '../utils/lisa_ex';
-import { ParsedArgs } from 'minimist';
-import { resolve, join } from 'path';
-import { mkdirs } from 'fs-extra';
-import { isEqual } from 'lodash';
-
-import { PACKAGE_HOME, loadBundles, getEnv, invalidateEnv } from '../env';
-import { get, set } from '../env/config';
-
-import parseArgs from '../utils/parseArgs';
-import extendExec from '../utils/extendExec';
-import { zephyrVersion } from '../utils/sdk';
-import { getRepoStatus } from '../utils/repo';
-import simpleGit, {
-  CloneOptions,
-  GitError,
-  SimpleGitProgressEvent,
-} from 'simple-git';
+import { join } from 'path';
+import simpleGit, { SimpleGitProgressEvent } from 'simple-git';
 import { GitExecutorResult } from 'simple-git/dist/src/lib/types';
+import { get, PLUGIN_HOME, set } from '../env/config';
+import extendExec from '../utils/extendExec';
+import { job, LisaType } from '../utils/lisa_ex';
+import parseArgs from '../utils/parseArgs';
+import { existsSync, rmdirSync } from 'fs-extra';
 
 const defaultGitRepo =
   'git@git.iflyos.cn:venus/zephyr/micropython/lv_micropython.git';
@@ -24,28 +13,41 @@ const defaultGitRepo =
 export default ({ application, cmd }: LisaType) => {
   job('use-sdk', {
     title: 'SDK 设置',
-    after: (ctx) => [application.tasks['install']],
     async task(ctx, task) {
       task.title = '';
 
       const exec = extendExec(cmd, { task });
-      const argv = application.argv as ParsedArgs;
-      const path = argv._[1];
       const current = await get('sdk');
-      const target = path || current;
 
       const { args, printHelp } = parseArgs(application.argv, {
+        path: { arg: 'path', help: '指定本地存放 SDK 的目录' },
         'from-git': { arg: 'url#ref', help: '从指定仓库及分支初始化 SDK' },
         'task-help': { short: 'h', help: '打印帮助' },
       });
+
+      if (args['task-help']) {
+        task.title = 'SDK 帮助';
+
+        printHelp();
+        return;
+      }
+
+      const defaultPath = join(PLUGIN_HOME, 'sdk');
+
+      const path = args['path'] || defaultPath;
+      const target = path;
 
       let gitRepo = defaultGitRepo;
       if (args['from-git']) {
         gitRepo = args['from-git'];
       }
 
-      if (!path) {
-        throw new Error(`SDK 路径是必传参数`);
+      if (target && /.*[\u4e00-\u9fa5]+.*$/.test(target)) {
+        throw new Error(`SDK 路径不能包含中文: ${target}`);
+      }
+
+      if (existsSync(target)) {
+        rmdirSync(target, { recursive: true });
       }
 
       // await exec('git', ['clone', gitRepo, path, '--recursive']);
@@ -76,11 +78,11 @@ export default ({ application, cmd }: LisaType) => {
         'git',
         ['submodule', 'update', '--init', '--recursive', '--depth=1'],
         {
-          cwd: join(process.cwd(), path),
+          cwd: target,
         }
       );
 
-      await set('sdk', join(process.cwd(), path));
+      await set('sdk', target);
 
       task.title = 'SDK 设置成功';
     },
