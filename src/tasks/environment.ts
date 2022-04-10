@@ -8,7 +8,7 @@ import parseArgs from '../utils/parseArgs';
 import { existsSync, rmdirSync } from 'fs-extra';
 
 const defaultGitRepo =
-  'git@git.iflyos.cn:venus/zephyr/micropython/lv_micropython.git';
+  'https://cloud.listenai.com/micropython/micropython.git';
 
 export default ({ application, cmd }: LisaType) => {
   job('use-sdk', {
