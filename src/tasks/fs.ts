@@ -23,7 +23,8 @@ import {
 } from '../utils/fs';
 import { appendFlashConfig, getFlashArgs } from '../utils/flash';
 import { getCMakeCache } from '../utils/cmake';
-import { ZEP_PLUGIN_HOME } from '../env/config';
+import { venvScripts } from '../venv';
+import { flashFlags } from '../utils/westConfig';
 
 export default ({ application, cmd }: LisaType) => {
   job('fs:calc', {
@@ -203,19 +204,20 @@ export default ({ application, cmd }: LisaType) => {
 
   job('fs:flash', {
     title: '资源镜像烧录',
-    before: (ctx) => [application.tasks['fs:build']],
+    before: (ctx) => [
+      application.tasks['fs:build'],
+    ],
     async task(ctx, task) {
       const { args, printHelp } = parseArgs(application.argv, {
-        env: { arg: 'name', help: '指定当次编译有效的环境' },
+        'env': { arg: 'name', help: '指定当次编译有效的环境' },
         'task-help': { short: 'h', help: '打印帮助' },
-        runner: { arg: 'string', help: '指定当次的烧录类型' },
+        'runner': { arg: 'string', help: '指定当次的烧录类型' },
         // 'node-label': { arg: 'label', help: '指定烧录的分区节点'},
       });
       if (args['task-help']) {
         return printHelp();
       }
-
-      const runner = args['runner'] || null;
+      // const runner = args['runner'] || null;
       // const nodeLabel = args['node-label'];
 
       const zepEnv = await getZepEnv(args['env']);
@@ -231,31 +233,21 @@ export default ({ application, cmd }: LisaType) => {
 
       application.debug(flashArgs);
 
-      if (runner) {
+      // if (runner) {
         // lisa zep flash --runner pyocd --flash-opt="--base-address=xxxx" --bin-file xxxx.bin
-        const VENUS_FLASH_BASE = 0x18000000;
-        for (let address in flashArgs) {
-          await exec(join(ZEP_PLUGIN_HOME, 'venv', 'bin', 'west'), [
-            'flash',
-            '--runner',
-            runner,
-            `--flash-opt=--base-address=0x${(
-              VENUS_FLASH_BASE + parseInt(address)
-            ).toString(16)}`,
-            '--bin-file',
-            flashArgs[address],
-          ]);
-        }
-      } else {
-        const flasher = await getFlasher(args['env']);
-        if (flasher) {
-          const { command, args: execArgs } =
-            flasher.makeFlashExecArgs(flashArgs);
-          await exec(command, execArgs);
-        } else {
-          throw new Error('当前环境不支持烧录资源镜像');
-        }
+      const VENUS_FLASH_BASE = 0x18000000;
+      for (let address in flashArgs) {
+        await exec(await venvScripts('west'), await flashFlags(['flash', `--flash-opt=--base-address=0x${(VENUS_FLASH_BASE + parseInt(address)).toString(16)}`, '--bin-file',  flashArgs[address]]))
       }
+      // } else {
+      //   const flasher = await getFlasher(args['env']);
+      //   if (flasher) {
+      //     const { command, args: execArgs } = flasher.makeFlashExecArgs(flashArgs);
+      //     await exec(command, execArgs);
+      //   } else {
+      //     throw new Error('当前环境不支持烧录资源镜像');
+      //   }
+      // }
     },
   });
 };
