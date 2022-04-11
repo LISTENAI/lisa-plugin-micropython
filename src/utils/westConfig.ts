@@ -1,12 +1,12 @@
 import { parse } from 'ini';
-import { get } from '../env/config';
+import { getFromZep } from '../env/config';
 import { join } from 'path';
 import { pathExists, readFile } from 'fs-extra';
 import Lisa from '@listenai/lisa_core';
 import { ParsedArgs } from 'minimist';
 
 export default async function westConfig(name: string): Promise<any> {
-  const sdk = await get('sdk');
+  const sdk = await getFromZep('sdk');
   if (!sdk) {
     return null;
   }

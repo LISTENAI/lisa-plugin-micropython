@@ -1,10 +1,8 @@
-import { LisaType, job } from '../utils/lisa_ex';
-import parseArgs from '../utils/parseArgs';
-import { join } from 'path';
-
 import { getEnv, getZepEnv } from '../env';
-import { venvScripts } from '../venv';
-import { ZEP_PLUGIN_HOME } from '../env/config';
+import { job, LisaType } from '../utils/lisa_ex';
+import parseArgs from '../utils/parseArgs';
+import { venvZepScripts } from '../venv';
+import { flashFlags } from '../utils/westConfig';
 
 export default ({ application, cmd, runner }: LisaType) => {
   job('build', {
@@ -42,7 +40,7 @@ export default ({ application, cmd, runner }: LisaType) => {
           .filter((arg) => arg !== '--firmware');
         const env = Object.assign(await getEnv(), await getZepEnv());
         application.debug(env);
-        await cmd(await venvScripts('west'), [...argv], {
+        await cmd(venvZepScripts('west'),  await flashFlags(argv), {
           stdio: 'inherit',
           env,
         });

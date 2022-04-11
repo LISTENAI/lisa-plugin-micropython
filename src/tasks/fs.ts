@@ -23,7 +23,7 @@ import {
 } from '../utils/fs';
 import { appendFlashConfig, getFlashArgs } from '../utils/flash';
 import { getCMakeCache } from '../utils/cmake';
-import { venvScripts } from '../venv';
+import { venvZepScripts } from '../venv';
 import { flashFlags } from '../utils/westConfig';
 
 export default ({ application, cmd }: LisaType) => {
@@ -237,7 +237,7 @@ export default ({ application, cmd }: LisaType) => {
         // lisa zep flash --runner pyocd --flash-opt="--base-address=xxxx" --bin-file xxxx.bin
       const VENUS_FLASH_BASE = 0x18000000;
       for (let address in flashArgs) {
-        await exec(await venvScripts('west'), await flashFlags(['flash', `--flash-opt=--base-address=0x${(VENUS_FLASH_BASE + parseInt(address)).toString(16)}`, '--bin-file',  flashArgs[address]]))
+        await exec(venvZepScripts('west'), await flashFlags(['flash', `--flash-opt=--base-address=0x${(VENUS_FLASH_BASE + parseInt(address)).toString(16)}`, '--bin-file',  flashArgs[address]]))
       }
       // } else {
       //   const flasher = await getFlasher(args['env']);
