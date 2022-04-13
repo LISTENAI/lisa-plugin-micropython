@@ -13,7 +13,6 @@ import { getZepEnv, getFlasher } from '../env';
 
 import parseArgs from '../utils/parseArgs';
 import extendExec from '../utils/extendExec';
-import { workspace } from '../utils/ux';
 import { loadDT } from '../utils/dt';
 import {
   parsePartitions,
@@ -25,6 +24,8 @@ import { appendFlashConfig, getFlashArgs } from '../utils/flash';
 import { getCMakeCache } from '../utils/cmake';
 import { venvZepScripts } from '../venv';
 import { flashFlags } from '../utils/westConfig';
+
+const DEFAULT_FS_LABEL = 'storage';
 
 export default ({ application, cmd }: LisaType) => {
   job('fs:calc', {
@@ -108,21 +109,14 @@ export default ({ application, cmd }: LisaType) => {
         'build-dir': { short: 'd', arg: 'path', help: '构建产物目录' },
         'task-help': { short: 'h', help: '打印帮助' },
         pristine: { short: 'p', help: '重新构建，不依赖原打包路径' },
-        'node-label': { arg: 'label', help: '指定打包的分区节点' },
+        'flash-area': { arg: 'label', help: '指定打包的分区节点' },
         type: { arg: 'type', help: '指定打包的文件系统类型' },
       });
       if (args['task-help']) {
         return printHelp(['fs:build [options] [project-path]']);
       }
 
-      const nodeLabel = args['node-label'];
-      const fsSourceDir = workspace();
-      const custom = !!nodeLabel && !!fsSourceDir;
-      if (!(custom || (!fsSourceDir && !nodeLabel))) {
-        throw new Error(
-          `需要同时指定打包目标目录和分区节点，详情请查看开发文档的文件系统章节`
-        );
-      }
+      const nodeLabel = args['flash-area'] || DEFAULT_FS_LABEL;
 
       const pristine = !!args['pristine'];
       const buildDir = resolve(args['build-dir'] ?? 'build');
@@ -166,7 +160,9 @@ export default ({ application, cmd }: LisaType) => {
 
       let newFsCache: IPartition[] = [];
 
-      const part = partitions.find((item: any) => item.type == 'littlefs');
+      const part = partitions.find(
+        (item: any) => item.type == 'littlefs' && item.regLabel == nodeLabel
+      );
       let partSourceDir = resourceDir;
 
       const fsCachePart: IPartition | undefined = fsCache.find(
@@ -204,21 +200,19 @@ export default ({ application, cmd }: LisaType) => {
 
   job('fs:flash', {
     title: '资源镜像烧录',
-    before: (ctx) => [
-      application.tasks['fs:build'],
-    ],
+    before: (ctx) => [application.tasks['fs:build']],
     async task(ctx, task) {
       const { args, printHelp } = parseArgs(application.argv, {
-        'env': { arg: 'name', help: '指定当次编译有效的环境' },
+        env: { arg: 'name', help: '指定当次编译有效的环境' },
         'task-help': { short: 'h', help: '打印帮助' },
-        'runner': { arg: 'string', help: '指定当次的烧录类型' },
-        // 'node-label': { arg: 'label', help: '指定烧录的分区节点'},
+        runner: { arg: 'string', help: '指定当次的烧录类型' },
+        'flash-area': { arg: 'label', help: '指定打包的分区节点' },
       });
       if (args['task-help']) {
         return printHelp();
       }
       // const runner = args['runner'] || null;
-      // const nodeLabel = args['node-label'];
+      // const nodeLabel = args['flash-area'] || DEFAULT_FS_LABEL;
 
       const zepEnv = await getZepEnv(args['env']);
       if (!zepEnv) {
@@ -234,10 +228,20 @@ export default ({ application, cmd }: LisaType) => {
       application.debug(flashArgs);
 
       // if (runner) {
-        // lisa zep flash --runner pyocd --flash-opt="--base-address=xxxx" --bin-file xxxx.bin
+      // lisa zep flash --runner pyocd --flash-opt="--base-address=xxxx" --bin-file xxxx.bin
       const VENUS_FLASH_BASE = 0x18000000;
       for (let address in flashArgs) {
-        await exec(venvZepScripts('west'), await flashFlags(['flash', `--flash-opt=--base-address=0x${(VENUS_FLASH_BASE + parseInt(address)).toString(16)}`, '--bin-file',  flashArgs[address]]))
+        await exec(
+          venvZepScripts('west'),
+          await flashFlags([
+            'flash',
+            `--flash-opt=--base-address=0x${(
+              VENUS_FLASH_BASE + parseInt(address)
+            ).toString(16)}`,
+            '--bin-file',
+            flashArgs[address],
+          ])
+        );
       }
       // } else {
       //   const flasher = await getFlasher(args['env']);

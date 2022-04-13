@@ -9,6 +9,7 @@ export interface IPartition {
   size: number;
   type: 'littlefs';
   source?: string;
+  regLabel?: String;
 }
 
 export function parsePartitions(dt: DeviceTree & IDeviceTreeParser): IPartition[] {
@@ -30,6 +31,7 @@ export function parsePartitions(dt: DeviceTree & IDeviceTreeParser): IPartition[
       if (typeof reg.addr != 'number' || typeof reg.size != 'number') continue;
       partitions.push({
         label: labelName,
+        regLabel: part.label,
         addr: reg.addr,
         size: reg.size,
         type: 'littlefs',
