@@ -134,3 +134,6 @@ lib/
 
 # File system
 .DS_Store
+
+# Python scripts
+__py_cache__

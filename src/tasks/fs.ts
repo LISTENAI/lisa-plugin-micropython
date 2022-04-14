@@ -1,31 +1,36 @@
-import { LisaType, job } from '../utils/lisa_ex';
-import { join, resolve } from 'path';
-import {
-  pathExists,
-  mkdirs,
-  remove,
-  readJson,
-  writeJson,
-  statSync,
-} from 'fs-extra';
-
-import { getZepEnv, getFlasher } from '../env';
-
-import parseArgs from '../utils/parseArgs';
-import extendExec from '../utils/extendExec';
-import { loadDT } from '../utils/dt';
-import {
-  parsePartitions,
-  checkFsFilter,
-  IFsFilter,
-  IPartition,
-} from '../utils/fs';
-import { appendFlashConfig, getFlashArgs } from '../utils/flash';
+import { mkdirs, pathExists, statSync, readdirSync, Stats } from 'fs-extra';
+import { join, resolve, basename, dirname } from 'path';
+import { getZepEnv } from '../env';
 import { getCMakeCache } from '../utils/cmake';
-import { venvZepScripts } from '../venv';
+import { findFlashInDts, FlashDesc } from '../utils/dt';
+import extendExec from '../utils/extendExec';
+import { job, LisaType } from '../utils/lisa_ex';
+import parseArgs from '../utils/parseArgs';
 import { flashFlags } from '../utils/westConfig';
+import { venvZepScripts } from '../venv';
 
+/**
+ * 在 MicroPython SDK 中默认以 #elif defined(CONFIG_FLASH_MAP) && FLASH_AREA_LABEL_EXISTS(storage) 做判断
+ */
 const DEFAULT_FS_LABEL = 'storage';
+
+const LFS_BLOCK_PER_FILE = 0;
+const LFS_BLOCK_PER_DIRECTORY = 0;
+const LFS_BLOCK_PER_SUPER_BLOCK = 0;
+
+function walkSync(
+  currentDirPath: string,
+  callback: (path: string, stat: Stats) => void
+) {
+  readdirSync(currentDirPath).forEach((name) => {
+    var filePath = join(currentDirPath, name);
+    var stat = statSync(filePath);
+    callback(filePath, stat);
+    if (stat.isDirectory()) {
+      walkSync(filePath, callback);
+    }
+  });
+}
 
 export default ({ application, cmd }: LisaType) => {
   job('fs:calc', {
@@ -39,11 +44,44 @@ export default ({ application, cmd }: LisaType) => {
         throw new Error('请在项目根目录下执行');
       }
 
-      const stat = statSync('py');
+      const blockSize = 4096;
 
-      let size = stat.size;
-      if (stat.size % 4096 != 0) {
-        size += 4096 - (stat.size % 4096);
+      const stat = statSync('py');
+      let minSize = stat.size;
+      if (minSize % blockSize != 0) {
+        minSize += blockSize - (minSize % blockSize);
+      }
+
+      let blocksPerFile = 0;
+      const codeDir = 'py';
+      let blocksPerDirectory: { [key: string]: number } = { py: 0 };
+      let size = 0;
+
+      // https://github.com/littlefs-project/littlefs/issues/95
+      const max = (a: number, b: number) => (a > b ? a : b);
+      walkSync(codeDir, (path, stat) => {
+        if (stat.isFile()) {
+          blocksPerFile += max(1, stat.size / (blockSize - 8));
+        }
+        const dirName = dirname(path);
+        if (!blocksPerDirectory[dirName]) {
+          blocksPerDirectory[dirName] = 0;
+        }
+        const name = basename(path);
+        blocksPerDirectory[dirName] +=
+          (new TextEncoder().encode(name).length + 12) / (blockSize - 20);
+      });
+      blocksPerFile = Math.ceil(blocksPerFile);
+
+      let directorySize = 0;
+      Object.keys(blocksPerDirectory).forEach((key) => {
+        directorySize += max(1, blocksPerDirectory[key]);
+      });
+      size = (blocksPerFile + 2 * directorySize) * blockSize;
+      application.debug({ blocksPerDirectory, blocksPerFile, size });
+
+      if (size < minSize) {
+        size = minSize;
       }
 
       task.title = `所需大小至少为 ${size} bytes，在设备树文件（.overlay）中可对应替换为 0x${size.toString(
@@ -56,6 +94,7 @@ export default ({ application, cmd }: LisaType) => {
     async task(ctx, task) {
       const { args } = parseArgs(application.argv, {
         'build-dir': { short: 'd', arg: 'path', help: '构建产物目录' },
+        'flash-area': { arg: 'label', help: '指定打包的分区节点' },
       });
 
       const buildDir = resolve(args['build-dir'] ?? 'build');
@@ -71,33 +110,15 @@ export default ({ application, cmd }: LisaType) => {
         throw new Error('ZEP环境未配置');
       }
 
-      const dt = await loadDT(buildDir, zepEnv);
-      const partitions = parsePartitions(dt);
-      ctx.partitions = partitions;
-      application.debug({ partitions });
-      if (!partitions.length) {
-        return task.skip('当前无文件系统分区');
+      const label = args['flash-area'] || DEFAULT_FS_LABEL;
+
+      const partition = await findFlashInDts(buildDir, label, zepEnv);
+
+      if (!partition) {
+        throw new Error(`找不到label 为 ${label} 的文件系统分区`);
       }
 
-      const fsFilterFile = join(project, 'fs_filter.json');
-      if (!(await pathExists(fsFilterFile))) {
-        return task.skip('当前无需要检查的固定资源');
-      }
-
-      let fsFilter: IFsFilter = {};
-      try {
-        fsFilter = await readJson(fsFilterFile);
-      } catch (error) {
-        return task.skip('fs_filter.json文件损坏');
-      }
-
-      const resourceDir = join(project, 'resource');
-      for (const part of partitions) {
-        if (part.type == 'littlefs') {
-          await mkdirs(join(resourceDir, part.label));
-          await checkFsFilter(part.label, fsFilter, resourceDir);
-        }
-      }
+      ctx.partition = partition;
     },
   });
 
@@ -108,17 +129,12 @@ export default ({ application, cmd }: LisaType) => {
       const { args, printHelp } = parseArgs(application.argv, {
         'build-dir': { short: 'd', arg: 'path', help: '构建产物目录' },
         'task-help': { short: 'h', help: '打印帮助' },
-        pristine: { short: 'p', help: '重新构建，不依赖原打包路径' },
-        'flash-area': { arg: 'label', help: '指定打包的分区节点' },
         type: { arg: 'type', help: '指定打包的文件系统类型' },
       });
       if (args['task-help']) {
         return printHelp(['fs:build [options] [project-path]']);
       }
 
-      const nodeLabel = args['flash-area'] || DEFAULT_FS_LABEL;
-
-      const pristine = !!args['pristine'];
       const buildDir = resolve(args['build-dir'] ?? 'build');
 
       const project =
@@ -127,15 +143,8 @@ export default ({ application, cmd }: LisaType) => {
         throw new Error(`项目不存在: ${project}`);
       }
 
-      const partitions = ctx.partitions || [];
-      application.debug({ partitions });
-      if (!partitions.length) {
-        return;
-      }
-
       const resourceDir = join(project, 'py');
       const resourceBuildDir = join(buildDir, 'resource');
-      const resourceBuildCacheFile = join(resourceBuildDir, 'fsCache.json');
       await mkdirs(resourceBuildDir);
 
       const zepEnv = await getZepEnv();
@@ -145,56 +154,19 @@ export default ({ application, cmd }: LisaType) => {
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 
-      // 获取原有的文件系统打包缓存信息
-      let fsCache: IPartition[] = [];
-      if (await pathExists(resourceBuildCacheFile)) {
-        try {
-          fsCache = await readJson(resourceBuildCacheFile);
-        } catch (error) {
-          throw new Error(
-            `${resourceBuildCacheFile} 缓存文件已损坏，请执行命令时带上 -p 参数`
-          );
-        }
+      const part = ctx.partition as FlashDesc;
+      if (!part) {
+        throw new Error(`无法找到待构建的文件系统分区`);
       }
-      if (pristine) fsCache = [];
-
-      let newFsCache: IPartition[] = [];
-
-      const part = partitions.find(
-        (item: any) => item.type == 'littlefs' && item.regLabel == nodeLabel
-      );
       let partSourceDir = resourceDir;
-
-      const fsCachePart: IPartition | undefined = fsCache.find(
-        (item: IPartition) => {
-          return (
-            item.label === part.label &&
-            item.addr === part.addr &&
-            item.size === part.size &&
-            item.type === part.type
-          );
-        }
-      );
-      if (fsCachePart) {
-        if (fsCachePart.source && !(await pathExists(fsCachePart.source))) {
-          throw new Error(
-            `node-label: ${part.label} 的缓存文件夹来源: ${fsCachePart.source} 不存在，更多用法请查看开发文档文件系统相关章节`
-          );
-        }
-        partSourceDir = fsCachePart.source || partSourceDir;
-      }
 
       await mkdirs(partSourceDir);
       const partFile = join(resourceBuildDir, `${part.label}.bin`);
-      await exec('mklfs', ['.', partFile, `${part.size}`], {
+      await exec('mklfs', ['.', partFile, `${part.reg[1]}`], {
         cwd: partSourceDir,
       });
 
-      part.source = partSourceDir;
-      newFsCache.push(part);
-      appendFlashConfig(ctx, 'fs', part.addr, partFile);
-
-      await writeJson(join(resourceBuildDir, 'fsCache.json'), newFsCache);
+      ctx.binFile = partFile;
     },
   });
 
@@ -211,8 +183,6 @@ export default ({ application, cmd }: LisaType) => {
       if (args['task-help']) {
         return printHelp();
       }
-      // const runner = args['runner'] || null;
-      // const nodeLabel = args['flash-area'] || DEFAULT_FS_LABEL;
 
       const zepEnv = await getZepEnv(args['env']);
       if (!zepEnv) {
@@ -220,38 +190,23 @@ export default ({ application, cmd }: LisaType) => {
       }
 
       const exec = extendExec(cmd, { task, env: zepEnv });
-      const flashArgs = await getFlashArgs(ctx, 'fs');
-      if (Object.keys(flashArgs).length == 0) {
-        return;
-      }
 
-      application.debug(flashArgs);
+      const partition = ctx.partition as FlashDesc;
 
-      // if (runner) {
-      // lisa zep flash --runner pyocd --flash-opt="--base-address=xxxx" --bin-file xxxx.bin
+      application.debug(partition);
+
       const VENUS_FLASH_BASE = 0x18000000;
-      for (let address in flashArgs) {
-        await exec(
-          venvZepScripts('west'),
-          await flashFlags([
-            'flash',
-            `--flash-opt=--base-address=0x${(
-              VENUS_FLASH_BASE + parseInt(address)
-            ).toString(16)}`,
-            '--bin-file',
-            flashArgs[address],
-          ])
-        );
-      }
-      // } else {
-      //   const flasher = await getFlasher(args['env']);
-      //   if (flasher) {
-      //     const { command, args: execArgs } = flasher.makeFlashExecArgs(flashArgs);
-      //     await exec(command, execArgs);
-      //   } else {
-      //     throw new Error('当前环境不支持烧录资源镜像');
-      //   }
-      // }
+      await exec(
+        venvZepScripts('west'),
+        await flashFlags([
+          'flash',
+          `--flash-opt=--base-address=0x${(
+            VENUS_FLASH_BASE + partition.reg[0]
+          ).toString(16)}`,
+          '--bin-file',
+          ctx.binFile,
+        ])
+      );
     },
   });
 };

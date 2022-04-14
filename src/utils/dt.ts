@@ -17,7 +17,14 @@ export interface DeviceTree {
   readonly nodes: Record<NodePath, Node>;
 }
 
-export type Property = boolean | string | number | string[] | number[] | NodePath | Controller[];
+export type Property =
+  | boolean
+  | string
+  | number
+  | string[]
+  | number[]
+  | NodePath
+  | Controller[];
 
 export interface Node {
   path: string;
@@ -40,13 +47,48 @@ export interface Controller {
   data: Record<string, any>;
 }
 
-export async function loadDT(buildDir: string, env: Record<string, string>): Promise<DeviceTree & IDeviceTreeParser> {
-  const { stdout } = await LISA.cmd('python', [
-    resolve(__dirname, '..', '..', 'scripts', 'edt2json.py'),
-    '--dtlib', resolve(env.ZEPHYR_BASE, 'scripts', 'dts', 'python-devicetree', 'src'),
-    '--edt-pickle', resolve(buildDir, 'zephyr', 'edt.pickle'),
-  ], { env });
+export interface FlashDesc {
+  reg: [number, number];
+  label: string;
+}
 
+export async function findFlashInDts(
+  buildDir: string,
+  label: string,
+  env: Record<string, string>
+): Promise<FlashDesc | null> {
+  const { stdout } = await LISA.cmd(
+    'python',
+    [
+      resolve(__dirname, '..', '..', 'scripts', 'find_flash_in_dts.py'),
+      '--dts',
+      resolve(buildDir, 'zephyr', 'zephyr.dts'),
+      '--label',
+      label,
+    ],
+    { env }
+  );
+  if (stdout == 'None') {
+    return null;
+  }
+  return JSON.parse(stdout) as FlashDesc;
+}
+
+export async function loadDT(
+  buildDir: string,
+  env: Record<string, string>
+): Promise<DeviceTree & IDeviceTreeParser> {
+  const { stdout } = await LISA.cmd(
+    'python',
+    [
+      resolve(__dirname, '..', '..', 'scripts', 'edt2json.py'),
+      '--dtlib',
+      resolve(env.ZEPHYR_BASE, 'scripts', 'dts', 'python-devicetree', 'src'),
+      '--edt-pickle',
+      resolve(buildDir, 'zephyr', 'edt.pickle'),
+    ],
+    { env }
+  );
   const dt = JSON.parse(stdout) as DeviceTree;
   return new DeviceTreeParser(dt);
 }
@@ -77,18 +119,24 @@ export default class DeviceTreeParser implements IDeviceTreeParser, DeviceTree {
   }
 
   labelNameByPath(path: NodePath): string | null {
-    return Object.keys(this.labels).find(labelName => this.labels[labelName] === path) || null;
+    return (
+      Object.keys(this.labels).find(
+        (labelName) => this.labels[labelName] === path
+      ) || null
+    );
   }
 
   under(parent: NodePath): Node[] {
     return Object.keys(this.nodes)
-      .filter(path => isChild(parent, path))
-      .map(path => this.nodes[path])
-      .filter(node => !!node);
+      .filter((path) => isChild(parent, path))
+      .map((path) => this.nodes[path])
+      .filter((node) => !!node);
   }
 }
 
 function isChild(parent: NodePath, path: NodePath): boolean {
-  return path.startsWith(`${parent}/`) &&
-    !path.substr(parent.length + 1).includes('/');
+  return (
+    path.startsWith(`${parent}/`) &&
+    !path.substr(parent.length + 1).includes('/')
+  );
 }
