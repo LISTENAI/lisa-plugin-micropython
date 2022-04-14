@@ -28,10 +28,17 @@ jobs:
       - name: Publish (latest)
         run: npm dist-tag add @lisa-plugin/micropython@${{ steps.get_version.outputs.version-without-v }} latest --registry=https://registry-lpm.listenai.com
 
+      - name: Get latest release
+        id: latest_release
+        uses: kaliber5/action-get-release@v1
+        with:
+          token: ${{ github.token }}
+          latest: true
+
       - name: WeChat Work notification by news
         uses: chf007/action-wechat-work@master
         env:
           WECHAT_WORK_BOT_WEBHOOK: ${{secrets.WECHAT_BOT_WEBHOOK_LISA_MICROPYTHON}}
         with:
           msgtype: news
-          articles: '[{"title":"@lisa-plugin/micropython@latest","description":"最新版本 ${{ steps.get_version.outputs.version-without-v }} 发布","url":"URL","picurl":"https://cdn.iflyos.cn/public/qwfb.jpeg"}]'
+          articles: '[{"title":"@lisa-plugin/micropython@latest","description":"最新版本 ${{ steps.get_version.outputs.version-without-v }} 发布","url":"{{ steps.latest_release.outputs.url}}","picurl":"https://cdn.iflyos.cn/public/qwfb.jpeg"}]'
