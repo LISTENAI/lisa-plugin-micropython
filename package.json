@@ -1,6 +1,6 @@
 {
   "name": "@lisa-plugin/micropython",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Lisa plugin for MicroPython with zephyr development",
   "main": "./lib/main.js",
   "lisa": {
