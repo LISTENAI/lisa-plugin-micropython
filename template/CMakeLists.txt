@@ -31,7 +31,6 @@ include($ENV{MICROPY_SDK}/ports/zephyr/lib_micropython.cmake)
 
 target_sources(app PRIVATE
     src/main.c
-    src/zephyr_getchar.c
     ${MPY_APP_SRC}
 )
 

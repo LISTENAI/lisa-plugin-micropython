@@ -25,16 +25,12 @@
  */
 #include <zephyr.h>
 #include <console/console.h>
-#include "zephyr_getchar.h"
 
 int real_main(void);
 
 void main(void) {
-#ifdef CONFIG_CONSOLE_SUBSYS
     console_init();
-#else
-    zephyr_getchar_init();
-#endif
+
     real_main();
 
     // This is needed so the linker includes k_timer_init, z_impl_k_timer_start
