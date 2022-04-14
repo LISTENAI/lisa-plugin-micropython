@@ -7,8 +7,7 @@ import { job, LisaType } from '../utils/lisa_ex';
 import parseArgs from '../utils/parseArgs';
 import { existsSync, rmdirSync } from 'fs-extra';
 
-const defaultGitRepo =
-  'https://cloud.listenai.com/micropython/micropython.git';
+const defaultGitRepo = 'https://cloud.listenai.com/micropython/micropython.git';
 
 export default ({ application, cmd }: LisaType) => {
   job('use-sdk', {
@@ -68,11 +67,7 @@ export default ({ application, cmd }: LisaType) => {
         task.output = `安装 SDK: ${event.stage} ${event.processed}/${event.total} ${event.progress}%`;
       };
       const gitOptions = { progress, errors };
-      await simpleGit(gitOptions).clone(gitRepo, path, [
-        '-b',
-        'listenai-simpilify',
-        '--depth=1',
-      ]);
+      await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
 
       await exec(
         'git',
