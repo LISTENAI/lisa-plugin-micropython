@@ -5,6 +5,7 @@ import { PathLike } from 'fs';
 
 export const PLUGIN_HOME = join(homedir(), '.listenai', 'lisa-micropython');
 export const ZEP_PLUGIN_HOME = join(homedir(), '.listenai', 'lisa-zephyr');
+export const NODE_MODULE_HOME = join(homedir(), '.listenai', 'lisa', 'node_modules');
 
 const CONFIG_FILE = join(PLUGIN_HOME, 'config.json');
 const ZEPHYR_CONFIG_FILE = join(

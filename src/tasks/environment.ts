@@ -5,7 +5,7 @@ import { get, PLUGIN_HOME, set } from '../env/config';
 import extendExec from '../utils/extendExec';
 import { job, LisaType } from '../utils/lisa_ex';
 import parseArgs from '../utils/parseArgs';
-import { existsSync, rmdirSync } from 'fs-extra';
+import { existsSync, rmSync } from 'fs-extra';
 
 const defaultGitRepo = 'https://cloud.listenai.com/micropython/micropython.git';
 
@@ -16,7 +16,6 @@ export default ({ application, cmd }: LisaType) => {
       task.title = '';
 
       const exec = extendExec(cmd, { task });
-      const current = await get('sdk');
 
       const { args, printHelp } = parseArgs(application.argv, {
         path: { arg: 'path', help: '指定本地存放 SDK 的目录' },
@@ -46,7 +45,14 @@ export default ({ application, cmd }: LisaType) => {
       }
 
       if (existsSync(target)) {
-        rmdirSync(target, { recursive: true });
+        // if is windows
+        if (process.platform === 'win32') {
+          await cmd('del', [target, '/s', '/q', '/f', '/a'], {
+            stderr: 'inherit',
+          });
+        } else {
+          rmSync(target, { recursive: true, force: true });
+        }
       }
 
       // await exec('git', ['clone', gitRepo, path, '--recursive']);

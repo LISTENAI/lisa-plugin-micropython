@@ -1,8 +1,8 @@
-import { getEnv, getZepEnv } from '../env';
+import { getBuildEnv } from '../env';
 import { job, LisaType } from '../utils/lisa_ex';
 import parseArgs from '../utils/parseArgs';
-import { venvZepScripts } from '../venv';
 import { flashFlags } from '../utils/westConfig';
+import { venvZepScripts } from '../venv';
 
 export default ({ application, cmd, runner }: LisaType) => {
   job('build', {
@@ -10,8 +10,9 @@ export default ({ application, cmd, runner }: LisaType) => {
     async task(ctx, task) {
       task.title = '';
       const argv = process.argv.slice(3);
-      const env = Object.assign(await getEnv(), await getZepEnv());
-      application.debug(env);
+      const env = await getBuildEnv();
+      application.debug('mpy env', env);
+
       await cmd('python', ['-m', 'west', ...argv], {
         stdio: 'inherit',
         env,
@@ -38,9 +39,9 @@ export default ({ application, cmd, runner }: LisaType) => {
         const argv = process.argv
           .slice(3)
           .filter((arg) => arg !== '--firmware');
-        const env = Object.assign(await getEnv(), await getZepEnv());
+        const env = await getBuildEnv();
         application.debug(env);
-        await cmd(venvZepScripts('west'),  await flashFlags(argv), {
+        await cmd(venvZepScripts('west'), await flashFlags(argv), {
           stdio: 'inherit',
           env,
         });

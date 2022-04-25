@@ -9,6 +9,8 @@ import { PLUGIN_HOME } from '../env/config';
 import python from '@binary/python-3.9';
 import venv from '../venv';
 
+import { installMinGW } from '../utils/mingw';
+
 export default ({ cmd }: LisaType) => {
   job('install', {
     title: '环境安装',
@@ -32,6 +34,10 @@ export default ({ cmd }: LisaType) => {
       await exec('python', ['-m', 'pip', 'install', 'mpy-cross'], {
         env: await getEnv(),
       });
+
+      if (process.platform === 'win32') {
+        await installMinGW();
+      }
 
       await invalidateEnv();
     },

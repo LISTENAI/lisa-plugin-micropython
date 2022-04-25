@@ -6,6 +6,7 @@ import { uniq, defaults } from 'lodash';
 import { pathExists, readJson, outputJson, remove } from 'fs-extra';
 
 import { KEY_OF_PATH, SYSTEM_PATHS, makePath, splitPath } from '../utils/path';
+import { getMinGWEnv } from '../utils/mingw';
 import typedImport from '../utils/typedImport';
 
 import { PLUGIN_HOME, ZEP_PLUGIN_HOME, get } from './config';
@@ -21,24 +22,38 @@ const PIP_INDEX_URL =
 
 const BUILTIN_BINARIES = ['../venv'];
 
-export async function getZepEnv(
+export async function getBuildEnv(
   override?: string
-): Promise<Record<string, string> | null> {
+): Promise<Record<string, string>> {
   const escape = (name: string) =>
     name.replaceAll('/', '_').replaceAll('\\', '_');
   const cacheName = override ? `cache_${escape(override)}.json` : 'cache.json';
-  const cacheFile = join(ZEP_ENV_CACHE_DIR, cacheName);
-  if (await pathExists(cacheFile)) {
-    const env = await readJson(cacheFile);
-    Object.assign(
-      env,
-      makePath([...splitPath(env[KEY_OF_PATH]), ...SYSTEM_PATHS])
-    );
-    return env;
+  const zepCacheFile = join(ZEP_ENV_CACHE_DIR, cacheName);
+  const cacheFile = join(ENV_CACHE_DIR, cacheName);
+  let zepEnv: Record<string, string> = {};
+  if (await pathExists(zepCacheFile)) {
+    zepEnv = await readJson(zepCacheFile);
+  } else {
+    throw new Error('Zephyr 环境未设置');
   }
-  return null;
+  let env: Record<string, string> = {};
+  if (await pathExists(cacheFile)) {
+    env = await readJson(cacheFile);
+  } else {
+    env = await makeEnv(override);
+    await outputJson(cacheFile, env);
+  }
+  Object.assign(
+    env,
+    zepEnv,
+    makePath([
+      ...splitPath(zepEnv[KEY_OF_PATH]),
+      ...splitPath(env[KEY_OF_PATH]),
+      ...SYSTEM_PATHS,
+    ])
+  );
+  return env;
 }
-
 /**
  *
  * @deprecated Should replace with lisa_core version
@@ -134,12 +149,33 @@ async function makeEnv(override?: string): Promise<Record<string, string>> {
     }
   }
 
-  const sdk = await get('sdk');
-  if (sdk) {
-    env['MICROPY_SDK'] = sdk;
+  binaries.push(PACKAGE_HOME);
+
+  const minGWEnv = getMinGWEnv();
+  for (const key of Object.keys(minGWEnv)) {
+    // if array
+    if (Array.isArray(minGWEnv[key])) {
+      binaries.push(...minGWEnv[key]);
+    } else {
+      const value = minGWEnv[key];
+      // if string
+      if (typeof value === 'string') {
+        env[key] = value;
+      }
+    }
   }
 
-  env['MICROPY_MPYCROSS'] = join(PLUGIN_HOME, 'venv', 'bin', 'mpy-cross');
+  const sdk = await get('sdk');
+  if (sdk) {
+    env['MICROPY_SDK'] = sdk.replaceAll('\\', '/');
+  }
+
+  env['MICROPY_MPYCROSS'] = join(
+    PLUGIN_HOME,
+    'venv',
+    'bin',
+    'mpy-cross'
+  ).replaceAll('\\', '/');
 
   Object.assign(env, {
     PIP_INDEX_URL,

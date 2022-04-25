@@ -1,6 +1,6 @@
 import { mkdirs, pathExists, statSync, readdirSync, Stats } from 'fs-extra';
 import { join, resolve, basename, dirname } from 'path';
-import { getZepEnv } from '../env';
+import { getBuildEnv } from '../env';
 import { getCMakeCache } from '../utils/cmake';
 import { findFlashInDts, FlashDesc } from '../utils/dt';
 import extendExec from '../utils/extendExec';
@@ -105,10 +105,7 @@ export default ({ application, cmd }: LisaType) => {
         throw new Error(`项目不存在: ${project}`);
       }
 
-      const zepEnv = await getZepEnv();
-      if (!zepEnv) {
-        throw new Error('ZEP环境未配置');
-      }
+      const zepEnv = await getBuildEnv();
 
       const label = args['flash-area'] || DEFAULT_FS_LABEL;
 
@@ -147,10 +144,7 @@ export default ({ application, cmd }: LisaType) => {
       const resourceBuildDir = join(buildDir, 'resource');
       await mkdirs(resourceBuildDir);
 
-      const zepEnv = await getZepEnv();
-      if (!zepEnv) {
-        throw new Error('ZEP环境未配置');
-      }
+      const zepEnv = await getBuildEnv();
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 
@@ -184,10 +178,7 @@ export default ({ application, cmd }: LisaType) => {
         return printHelp();
       }
 
-      const zepEnv = await getZepEnv(args['env']);
-      if (!zepEnv) {
-        throw new Error('ZEP环境未配置');
-      }
+      const zepEnv = await getBuildEnv(args['env']);
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 

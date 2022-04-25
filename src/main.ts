@@ -2,7 +2,7 @@ import { promisify } from 'util';
 import { execFile as _execFile } from 'child_process';
 import { defaults } from 'lodash';
 import { pathExists } from 'fs-extra';
-import { loadBundles, loadBinaries, getEnv, getZepEnv } from './env';
+import { loadBundles, loadBinaries, getEnv } from './env';
 import { PLUGIN_HOME, get, getFromZep } from './env/config';
 import { zephyrVersion, mpyVersion } from './utils/sdk';
 import { getRepoStatus } from './utils/repo';
