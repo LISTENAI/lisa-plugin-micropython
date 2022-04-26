@@ -1,5 +1,5 @@
 import { promisify } from 'util';
-import { execFile as _execFile } from 'child_process';
+import { execFile as _execFile, ExecFileOptions } from 'child_process';
 import { defaults } from 'lodash';
 import { pathExists } from 'fs-extra';
 import { loadBundles, loadBinaries, getEnv } from './env';
@@ -7,6 +7,7 @@ import { PLUGIN_HOME, get, getFromZep } from './env/config';
 import { zephyrVersion, mpyVersion } from './utils/sdk';
 import { getRepoStatus } from './utils/repo';
 import Lisa from '@listenai/lisa_core';
+import { platform } from 'os';
 
 const execFile = promisify(_execFile);
 
@@ -48,9 +49,12 @@ export async function env(): Promise<Record<string, string>> {
 
 async function getZepPluginVersion(): Promise<string | null> {
   try {
-    const { stdout } = await execFile('npm', ['list', '-g', '--depth=0'], {
-      env: await getEnv(),
-    });
+    const option: ExecFileOptions = {};
+    if (platform() == 'win32') {
+      option.shell = 'powershell';
+    }
+
+    const { stdout } = await execFile('npm', ['list', '-g', '--depth=0'], option);
     return (
       stdout
         .trim()
