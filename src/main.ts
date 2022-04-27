@@ -54,7 +54,11 @@ async function getZepPluginVersion(): Promise<string | null> {
       option.shell = 'powershell';
     }
 
-    const { stdout } = await execFile('npm', ['list', '-g', '--depth=0'], option);
+    const { stdout } = await execFile(
+      'npm',
+      ['list', '-g', '--depth=0'],
+      option
+    );
     return (
       stdout
         .trim()
@@ -118,6 +122,9 @@ export async function undertake(argv?: string[] | undefined): Promise<void> {
   argv = argv ?? process.argv.slice(3);
   const { cmd } = Lisa;
   try {
+    process.on('SIGINT', () => {
+      // ignore
+    });
     await cmd('mpremote', argv, {
       stdio: 'inherit',
       env: await getEnv(),
