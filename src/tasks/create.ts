@@ -6,6 +6,7 @@ import { createInterface } from 'readline';
 import { once } from 'events';
 import { ISampleList, path2json } from '../utils/fs';
 import { replaceWord } from '../utils/template';
+import { readdirSync } from 'fs';
 
 export default ({ application, cmd }: LisaType) => {
   job('create', {
@@ -32,11 +33,17 @@ export default ({ application, cmd }: LisaType) => {
         targetDir
       );
       const fsSizeKb = parseInt(fileSystemSize, 10);
-      replaceWord(
-        join(targetDir, 'boards', 'csk6001_pico.overlay'),
-        '{{FILESYSTEM_SIZE}}',
-        `0x${(fsSizeKb * 1024).toString(16)}`
-      );
+      // list file in boards/*.overlay
+      const boardsDir = join(targetDir, 'boards');
+      readdirSync(boardsDir)
+        .filter((file) => file.endsWith('.overlay'))
+        .forEach((file) => {
+          replaceWord(
+            join(boardsDir, file),
+            '{{FILESYSTEM_SIZE}}',
+            `0x${(fsSizeKb * 1024).toString(16)}`
+          );
+        });
     },
   });
 };
