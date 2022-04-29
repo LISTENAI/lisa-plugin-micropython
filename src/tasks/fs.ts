@@ -1,5 +1,5 @@
-import { mkdirs, pathExists, statSync, readdirSync, Stats } from 'fs-extra';
-import { join, resolve, basename, dirname } from 'path';
+import { mkdirs, pathExists, readdirSync, Stats, statSync } from 'fs-extra';
+import { basename, dirname, join, resolve } from 'path';
 import { getBuildEnv } from '../env';
 import { getCMakeCache } from '../utils/cmake';
 import { findFlashInDts, FlashDesc } from '../utils/dt';

@@ -1,7 +1,6 @@
 import { pathExists, readJson, writeJson } from 'fs-extra';
-import { join } from 'path';
 import { homedir } from 'os';
-import { PathLike } from 'fs';
+import { join } from 'path';
 
 export const PLUGIN_HOME = join(homedir(), '.listenai', 'lisa-micropython');
 export const ZEP_PLUGIN_HOME = join(homedir(), '.listenai', 'lisa-zephyr');

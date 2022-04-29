@@ -1,12 +1,11 @@
+import { execFileSync } from 'child_process';
+import { existsSync, rmSync } from 'fs-extra';
 import { join } from 'path';
 import simpleGit, { SimpleGitProgressEvent } from 'simple-git';
 import { GitExecutorResult } from 'simple-git/dist/src/lib/types';
-import { get, PLUGIN_HOME, set } from '../env/config';
-import extendExec from '../utils/extendExec';
+import { PLUGIN_HOME, set } from '../env/config';
 import { job, LisaType } from '../utils/lisa_ex';
 import parseArgs from '../utils/parseArgs';
-import { existsSync, rmSync } from 'fs-extra';
-import { execFileSync } from 'child_process';
 
 const defaultGitRepo = 'https://cloud.listenai.com/micropython/micropython.git';
 

@@ -1,14 +1,10 @@
-import { LisaType, job } from '../utils/lisa_ex';
-import { get } from '../env/config';
-import { join, parse, resolve, sep } from 'path';
-import { pathExists, createReadStream, copy, mkdirs } from 'fs-extra';
-import { createInterface } from 'readline';
-import { once } from 'events';
-import { ISampleList, path2json } from '../utils/fs';
-import { replaceWord } from '../utils/template';
 import { readdirSync } from 'fs';
+import { copy, mkdirs } from 'fs-extra';
+import { join } from 'path';
+import { job, LisaType } from '../utils/lisa_ex';
+import { replaceWord } from '../utils/template';
 
-export default ({ application, cmd }: LisaType) => {
+export default (lisa: LisaType) => {
   job('create', {
     title: '创建项目',
     async task(ctx, task) {

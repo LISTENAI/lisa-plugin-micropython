@@ -1,7 +1,5 @@
 import LISA, { TaskObject } from '@listenai/lisa_core';
-import { Options, ExecaChildProcess } from 'execa';
-import { createInterface } from 'readline';
-import { PassThrough } from 'stream';
+import { ExecaChildProcess, Options } from 'execa';
 
 type CmdFunc = typeof LISA.cmd;
 type TaskArguments = Parameters<TaskObject['task']>;

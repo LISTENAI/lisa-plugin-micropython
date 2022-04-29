@@ -1,7 +1,6 @@
-import { DeviceTree, IDeviceTreeParser } from './dt';
-import { join } from 'path';
 import { pathExists } from 'fs-extra';
-import Lisa from '@listenai/lisa_core';
+import { join } from 'path';
+import { DeviceTree, IDeviceTreeParser } from './dt';
 
 export interface IPartition {
   label: string;
