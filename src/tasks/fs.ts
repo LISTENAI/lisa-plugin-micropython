@@ -105,7 +105,7 @@ export default ({ application, cmd }: LisaType) => {
         throw new Error(`项目不存在: ${project}`);
       }
 
-      const zepEnv = await getBuildEnv();
+      const zepEnv = await getBuildEnv(application);
 
       const label = args['flash-area'] || DEFAULT_FS_LABEL;
 
@@ -144,7 +144,7 @@ export default ({ application, cmd }: LisaType) => {
       const resourceBuildDir = join(buildDir, 'resource');
       await mkdirs(resourceBuildDir);
 
-      const zepEnv = await getBuildEnv();
+      const zepEnv = await getBuildEnv(application);
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 
@@ -178,7 +178,7 @@ export default ({ application, cmd }: LisaType) => {
         return printHelp();
       }
 
-      const zepEnv = await getBuildEnv(args['env']);
+      const zepEnv = await getBuildEnv(application, args['env']);
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 
@@ -188,7 +188,7 @@ export default ({ application, cmd }: LisaType) => {
 
       const VENUS_FLASH_BASE = 0x18000000;
       await exec(
-        venvZepScripts('west'),
+        await venvZepScripts(application, 'west'),
         await flashFlags([
           'flash',
           `--flash-opt=--base-address=0x${(

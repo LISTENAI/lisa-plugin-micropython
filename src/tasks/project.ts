@@ -10,7 +10,7 @@ export default ({ application, cmd, runner }: LisaType) => {
     async task(ctx, task) {
       task.title = '';
       const argv = process.argv.slice(3);
-      const env = await getBuildEnv();
+      const env = await getBuildEnv(application);
       application.debug('mpy env', env);
 
       await cmd('python', ['-m', 'west', ...argv], {
@@ -39,12 +39,16 @@ export default ({ application, cmd, runner }: LisaType) => {
         const argv = process.argv
           .slice(3)
           .filter((arg) => arg !== '--firmware');
-        const env = await getBuildEnv();
+        const env = await getBuildEnv(application);
         application.debug(env);
-        await cmd(venvZepScripts('west'), await flashFlags(argv), {
-          stdio: 'inherit',
-          env,
-        });
+        await cmd(
+          await venvZepScripts(application, 'west'),
+          await flashFlags(argv),
+          {
+            stdio: 'inherit',
+            env,
+          }
+        );
       }
 
       if (!args['firmware']) {

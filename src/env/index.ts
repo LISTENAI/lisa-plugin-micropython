@@ -1,4 +1,4 @@
-import LISA from '@listenai/lisa_core';
+import LISA, { Application } from '@listenai/lisa_core';
 import { Bundle, Flasher } from '@lisa-env/type';
 import { Binary } from '@binary/type';
 import { delimiter, join } from 'path';
@@ -9,13 +9,12 @@ import { KEY_OF_PATH, SYSTEM_PATHS, makePath, splitPath } from '../utils/path';
 import { getMinGWEnv } from '../utils/mingw';
 import typedImport from '../utils/typedImport';
 
-import { PLUGIN_HOME, ZEP_PLUGIN_HOME, get } from './config';
+import { PLUGIN_HOME, get } from './config';
 
 export const PACKAGE_HOME = join(PLUGIN_HOME, 'packages');
 const PACKAGE_MODULES_DIR = join(PACKAGE_HOME, 'node_modules');
 
 const ENV_CACHE_DIR = join(PLUGIN_HOME, 'envs');
-const ZEP_ENV_CACHE_DIR = join(ZEP_PLUGIN_HOME, 'envs');
 
 const PIP_INDEX_URL =
   process.env.PIP_INDEX_URL || 'https://pypi.tuna.tsinghua.edu.cn/simple';
@@ -23,19 +22,19 @@ const PIP_INDEX_URL =
 const BUILTIN_BINARIES = ['../venv'];
 
 export async function getBuildEnv(
+  application: Application,
   override?: string
 ): Promise<Record<string, string>> {
   const escape = (name: string) =>
     name.replaceAll('/', '_').replaceAll('\\', '_');
   const cacheName = override ? `cache_${escape(override)}.json` : 'cache.json';
-  const zepCacheFile = join(ZEP_ENV_CACHE_DIR, cacheName);
   const cacheFile = join(ENV_CACHE_DIR, cacheName);
-  let zepEnv: Record<string, string> = {};
-  if (await pathExists(zepCacheFile)) {
-    zepEnv = await readJson(zepCacheFile);
-  } else {
+  const zephyr = await application.getPluginByName('zephyr');
+  const zepEnv = zephyr.env;
+  if (!zepEnv) {
     throw new Error('Zephyr 环境未设置');
   }
+  application.debug('zep env', zepEnv);
   let env: Record<string, string> = {};
   if (await pathExists(cacheFile)) {
     env = await readJson(cacheFile);
@@ -56,7 +55,6 @@ export async function getBuildEnv(
 }
 /**
  *
- * @deprecated Should replace with lisa_core version
  * @param override
  * @returns
  */
@@ -67,22 +65,18 @@ export async function getEnv(
     name.replaceAll('/', '_').replaceAll('\\', '_');
   const cacheName = override ? `cache_${escape(override)}.json` : 'cache.json';
   const cacheFile = join(ENV_CACHE_DIR, cacheName);
+  let env: { [key: string]: string } = {};
   if (await pathExists(cacheFile)) {
-    const env = await readJson(cacheFile);
-    Object.assign(
-      env,
-      makePath([...splitPath(env[KEY_OF_PATH]), ...SYSTEM_PATHS])
-    );
-    return env;
+    env = await readJson(cacheFile);
   } else {
-    const env = await makeEnv(override);
+    env = await makeEnv(override);
     await outputJson(cacheFile, env);
-    Object.assign(
-      env,
-      makePath([...splitPath(env[KEY_OF_PATH]), ...SYSTEM_PATHS])
-    );
-    return env;
   }
+  env = Object.assign(
+    env,
+    makePath([...splitPath(env[KEY_OF_PATH]), ...SYSTEM_PATHS])
+  );
+  return env;
 }
 
 export async function invalidateEnv(): Promise<void> {
