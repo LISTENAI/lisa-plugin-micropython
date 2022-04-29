@@ -60,17 +60,17 @@
   resolved "https://registry-lpm.listenai.com/@lisa-env/type/download/@lisa-env/type-1.2.0.tgz#945aeb49d9b167e1675ee2aea1dcdfecb5be27aa"
   integrity sha1-lFrrSdmxZ+FnXuKuodzf7LW+J6o=
 
-"@listenai/lisa_core@^2.0.5":
-  version "2.0.5"
-  resolved "https://registry-lpm.listenai.com/@listenai/lisa_core/download/@listenai/lisa_core-2.0.5.tgz#6143466482323473a08f075e7bf06f5dec92bf31"
-  integrity sha1-YUNGZIIyNHOgjwdee/BvXeySvzE=
+"@listenai/lisa_core@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry-lpm.listenai.com/@listenai/lisa_core/download/@listenai/lisa_core-2.1.1.tgz#9c3f3f9d2164ba5354bd49f8aa504738f397834e"
+  integrity sha1-nD8/nSFkulNUvUn4qlBHOPOXg04=
   dependencies:
     "@types/adm-zip" "^0.4.34"
     "@types/fs-extra" "^9.0.11"
     adm-zip "^0.5.5"
     cli-ux "^5.6.2"
     debug "^4.3.2"
-    ejs "^3.1.6"
+    ejs "^3.1.7"
     enquirer "^2.3.6"
     execa "^5.1.1"
     fs-extra "^10.0.0"
@@ -467,10 +467,10 @@ astral-regex@^2.0.0:
   resolved "https://registry.npmmirror.com/astral-regex/-/astral-regex-2.0.0.tgz#483143c567aeed4785759c0865786dc77d7d2e31"
   integrity sha512-Z7tMw1ytTXt5jqMcOP+OQteU1VuNK9Y02uuJtKQ1Sv69jXQKKg5cibLwGJow8yzZP+eAc18EmLGPal0bp36rvQ==
 
-async@0.9.x:
-  version "0.9.2"
-  resolved "https://registry.npmmirror.com/async/-/async-0.9.2.tgz#aea74d5e61c1f899613bf64bda66d4c78f2fd17d"
-  integrity sha512-l6ToIJIotphWahxxHyzK9bnLR6kM4jJIIgLShZeqLY7iboHoGkdgFl7W2/Ivi4SkMJYGKqW8vSuk0uKUj6qsSw==
+async@^3.2.3:
+  version "3.2.3"
+  resolved "https://registry.npmmirror.com/async/-/async-3.2.3.tgz#ac53dafd3f4720ee9e8a160628f18ea91df196c9"
+  integrity sha512-spZRyzKL5l5BZQrr/6m/SqFdBN0q3OCI0f9rjfBzCMBIP4p75P620rR3gTmaksNOhmzgdxcaxdNfMy6anrbM0g==
 
 balanced-match@^1.0.0:
   version "1.0.2"
@@ -723,12 +723,12 @@ dir-glob@^3.0.1:
   dependencies:
     path-type "^4.0.0"
 
-ejs@^3.1.6:
-  version "3.1.6"
-  resolved "https://registry.npmmirror.com/ejs/-/ejs-3.1.6.tgz#5bfd0a0689743bb5268b3550cceeebbc1702822a"
-  integrity sha512-9lt9Zse4hPucPkoP7FHDF0LQAlGyF9JVpnClFLFH3aSSbxmyoqINRpp/9wePWJTUl4KOQwRL72Iw3InHPDkoGw==
+ejs@^3.1.7:
+  version "3.1.7"
+  resolved "https://registry.npmmirror.com/ejs/-/ejs-3.1.7.tgz#c544d9c7f715783dd92f0bddcf73a59e6962d006"
+  integrity sha512-BIar7R6abbUxDA3bfXrO4DSgwo8I+fB5/1zgujl3HLLjwd6+9iOnrT+t3grn2qbk9vOgBubXOFwX2m9axoFaGw==
   dependencies:
-    jake "^10.6.1"
+    jake "^10.8.5"
 
 emoji-regex@^8.0.0:
   version "8.0.0"
@@ -1051,12 +1051,12 @@ isexe@^2.0.0:
   resolved "https://registry.npmmirror.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
   integrity sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==
 
-jake@^10.6.1:
-  version "10.8.4"
-  resolved "https://registry.npmmirror.com/jake/-/jake-10.8.4.tgz#f6a8b7bf90c6306f768aa82bb7b98bf4ca15e84a"
-  integrity sha512-MtWeTkl1qGsWUtbl/Jsca/8xSoK3x0UmS82sNbjqxxG/de/M/3b1DntdjHgPMC50enlTNwXOCRqPXLLt5cCfZA==
+jake@^10.8.5:
+  version "10.8.5"
+  resolved "https://registry.npmmirror.com/jake/-/jake-10.8.5.tgz#f2183d2c59382cb274226034543b9c03b8164c46"
+  integrity sha512-sVpxYeuAhWt0OTWITwT98oyV0GsXyMlXCF+3L1SuafBVUIr/uILGRB+NqwkzhgXKvoJpDIpQvqkUALgdmQsQxw==
   dependencies:
-    async "0.9.x"
+    async "^3.2.3"
     chalk "^4.0.2"
     filelist "^1.0.1"
     minimatch "^3.0.4"
