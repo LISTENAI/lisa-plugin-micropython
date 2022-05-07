@@ -78,7 +78,7 @@ export default ({ application, cmd }: LisaType) => {
         console.log('更新子模块 ...');
         await cmd(
           'git',
-          ['submodule', 'update', '--init', '--recursive', '--depth=1'],
+          ['submodule', 'update', '--force', '--init', '--recursive', '--depth=1'],
           {
             cwd: target,
             stdio: 'inherit',
@@ -92,7 +92,7 @@ export default ({ application, cmd }: LisaType) => {
           cwd: target,
         });
         console.log('更新子模块 ...');
-        execFileSync('git', ['submodule', 'update'], {
+        execFileSync('git', ['submodule', 'update', '--force'], {
           cwd: target,
           stdio: [process.stdin, process.stdout, process.stderr],
         });
