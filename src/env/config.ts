@@ -16,6 +16,7 @@ const ZEPHYR_CONFIG_FILE = join(
 interface IPluginConfig {
   env?: string[];
   sdk?: string;
+  last_connect?: string[];
 }
 
 async function load<T>(configFile = CONFIG_FILE): Promise<T | null> {
