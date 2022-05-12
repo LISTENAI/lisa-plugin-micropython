@@ -161,7 +161,8 @@ async function makeEnv(override?: string): Promise<Record<string, string>> {
 
   const sdk = await get('sdk');
   if (sdk) {
-    env['MICROPY_SDK'] = sdk.replaceAll('\\', '/');
+    console.log(sdk);
+    env['MICROPY_SDK'] = sdk.replace(/\\/g, '/');
   }
 
   env['MICROPY_MPYCROSS'] = join(
@@ -169,7 +170,7 @@ async function makeEnv(override?: string): Promise<Record<string, string>> {
     'venv',
     'bin',
     'mpy-cross'
-  ).replaceAll('\\', '/');
+  ).replace(/\\/g, '/');
 
   Object.assign(env, {
     PIP_INDEX_URL,
