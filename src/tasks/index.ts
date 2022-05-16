@@ -7,6 +7,7 @@ import installation from './installation';
 import mpremote from './mpremote';
 import mpy_cross from './mpy_cross';
 import project from './project';
+import pip from './pip';
 
 export default (core: LisaType) => {
   create(core);
@@ -16,4 +17,5 @@ export default (core: LisaType) => {
   mpremote(core);
   mpy_cross(core);
   project(core);
+  pip(core);
 };
