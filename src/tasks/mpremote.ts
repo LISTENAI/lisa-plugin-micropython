@@ -26,6 +26,7 @@ export default (lisa: LisaType) => {
           env: await getEnv(),
         });
       } catch (error) {}
+      task.title = '执行结束';
     },
   });
   job('connect', {
@@ -45,6 +46,7 @@ export default (lisa: LisaType) => {
           env: await getEnv(),
         });
       } catch (error) {}
+      task.title = '执行结束';
     },
   });
 };
