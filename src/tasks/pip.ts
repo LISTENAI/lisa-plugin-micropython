@@ -6,7 +6,7 @@ import { mkdir, writeFile, readdir, unlink, readFile, rmdir } from 'fs/promises'
 import got from 'got';
 import unzip from '../utils/unzip';
 
-const PACKAGE_URL = 'https://micropython.org/pi';
+const PACKAGE_URL = ['https://micropython.org/pi', 'https://pypi.org/pypi'];
 const PACKAGE_PATH = 'py/_slash_lib';
 
 export default ({ application }: LisaType) => {
@@ -35,14 +35,20 @@ export default ({ application }: LisaType) => {
       task.title = `安装${deps}`;
 
       const getPackage = async (name: string): Promise<{ version: string, url: string }> => {
-        const reqUrl = `${PACKAGE_URL}/${name}/json`;
-        const data = await (await got.get(reqUrl)).body;
-        const result = JSON.parse(data);
-        const urls = result.releases[result.info.version]
-        return {
-          version: result.info.version,
-          url: urls[urls.length - 1].url
-        };
+        for (const url of PACKAGE_URL) {
+          try {
+            const response = await got.get(`${url}/${name}/json`);
+            const result = JSON.parse(response.body);
+            const urls = result.releases[result.info.version];
+            return {
+              version: result.info.version,
+              url: urls[urls.length - 1].url
+            };
+          } catch (error) {
+          }
+        }
+
+        throw new Error(`${name}不存在`);
       };
 
       const createDirIfNotExist = async (dir: string): Promise<void> => {
