@@ -1,15 +1,8 @@
-import { LisaType, job } from '../utils/lisa_ex';
-import { join } from 'path';
-import { mkdirs, remove } from 'fs-extra';
-
-import extendExec from '../utils/extendExec';
-import { getEnv, invalidateEnv } from '../env';
+import { remove } from 'fs-extra';
 import { PLUGIN_HOME } from '../env/config';
-
-import python from '@binary/python-3.9';
-import venv from '../venv';
-
-import { installMinGW } from '../utils/mingw';
+import extendExec from '../utils/extendExec';
+import { install } from '../utils/install';
+import { job, LisaType } from '../utils/lisa_ex';
 
 export default ({ cmd }: LisaType) => {
   job('install', {
@@ -17,29 +10,7 @@ export default ({ cmd }: LisaType) => {
     async task(ctx, task) {
       const exec = extendExec(cmd, { task });
 
-      await mkdirs(PLUGIN_HOME);
-
-      await invalidateEnv();
-
-      await exec(join(python.binaryDir, 'python'), [
-        '-m',
-        'venv',
-        venv.homeDir,
-        '--upgrade-deps',
-      ]);
-
-      await exec('python', ['-m', 'pip', 'install', 'mpremote'], {
-        env: await getEnv(),
-      });
-      await exec('python', ['-m', 'pip', 'install', 'mpy-cross'], {
-        env: await getEnv(),
-      });
-
-      if (process.platform === 'win32') {
-        await installMinGW();
-      }
-
-      await invalidateEnv();
+      await install(exec);
     },
   });
 

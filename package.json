@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc -p .",
+    "postinstall": "node ./lib/jobs/install.js",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
     "format-code": "prettier --write ./src"

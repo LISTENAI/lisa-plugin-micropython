@@ -161,7 +161,6 @@ async function makeEnv(override?: string): Promise<Record<string, string>> {
 
   const sdk = await get('sdk');
   if (sdk) {
-    console.log(sdk);
     env['MICROPY_SDK'] = sdk.replace(/\\/g, '/');
   }
 
