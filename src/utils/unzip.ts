@@ -16,10 +16,19 @@ export default async function (buffer: Buffer, filter?: string): Promise<{ [key:
 
     extract.on('entry', (header: Headers, stream: PassThrough, next: () => void) => {
         stream.on('data', (chunk: Buffer) => {
+            const addToEntries = () => {
+                //found same file in entries, concat buffer
+                if (entries[header.name]) {
+                    entries[header.name] = Buffer.concat([entries[header.name], chunk]);
+                } else {
+                    entries[header.name] = chunk;
+                }
+            };
+
             if (!filter) {
-                entries[header.name] = chunk;
+                addToEntries();
             } else if (!header.name.includes(filter)) {
-                entries[header.name] = chunk;
+                addToEntries();
             }
         });
 
