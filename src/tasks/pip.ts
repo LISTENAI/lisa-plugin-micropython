@@ -8,6 +8,14 @@ import unzip from '../utils/unzip';
 
 const PACKAGE_URL = ['https://micropython.org/pi', 'https://pypi.org/pypi'];
 const PACKAGE_PATH = 'py/_slash_lib';
+const EGG_FILE_PATH = `${PACKAGE_PATH}/packages-egg-info`;
+
+interface EggInfo {
+  [name: string]: {
+    version: string;
+    sources: string[];
+  }
+}
 
 export default ({ application }: LisaType) => {
   const check = () => {
@@ -24,6 +32,16 @@ export default ({ application }: LisaType) => {
       throw new Error('请指定要安装的库名');
     }
     return argv.slice(1, argv.length);
+  };
+
+  const readEggInfo = async (): Promise<{ eggFilePath: string, eggInfo: EggInfo }> => {
+    const eggFilePath = join(process.cwd(), EGG_FILE_PATH);
+    let eggInfo: EggInfo = {};
+    if (existsSync(eggFilePath)) {
+      const eggData = await readFile(eggFilePath);
+      eggInfo = JSON.parse(eggData.toString());
+    }
+    return { eggFilePath, eggInfo };
   };
 
   job('pip:install', {
@@ -71,6 +89,8 @@ export default ({ application }: LisaType) => {
         return await (await got.get(url)).rawBody;
       };
 
+      const { eggFilePath, eggInfo } = await readEggInfo();
+
       const installed: string[] = [];
 
       /**
@@ -83,7 +103,7 @@ export default ({ application }: LisaType) => {
             const pkgInfo = await getPackage(dep);
 
             const data = await download(pkgInfo.url);
-            await install(data, dep);
+            await install(data, dep, pkgInfo);
 
             installed.push(dep);
           }
@@ -93,10 +113,9 @@ export default ({ application }: LisaType) => {
       /**
        * unzip and save package to package directory
        */
-      const install = async (data: Buffer, name: string): Promise<void> => {
+      const install = async (data: Buffer, name: string, pkgInfo: { version: string, url: string }): Promise<void> => {
         const zip = await unzip(data, 'PKG-INFO');
-        let fileList = '';
-        let eggFilePath = '';
+        eggInfo[name] = { version: pkgInfo.version, sources: [] };
         for (const [path, buffer] of Object.entries(zip)) {
           const items = path.split('/').filter(item => item.length > 0);
           const pyPath = path.replaceAll(`${items[0]}/`, '');
@@ -108,17 +127,12 @@ export default ({ application }: LisaType) => {
             if (subPath) {
               const libPath = join(PACKAGE_PATH, subPath[0]);
               await createDirIfNotExist(libPath);
-              eggFilePath = `${libPath}/${name}-egg-info`;
-            } else {
-              eggFilePath = `${PACKAGE_PATH}/${name}-egg-info`;
             }
 
             const file = join(PACKAGE_PATH, pyPath);
-            fileList += `${file}\n`;
+            eggInfo[name].sources.push(file);
 
             await writeFile(file, buffer);
-
-            await writeFile(eggFilePath, fileList);
           }
 
           /**
@@ -130,6 +144,8 @@ export default ({ application }: LisaType) => {
             await installDeps(deps);
           }
         }
+
+        await writeFile(eggFilePath, JSON.stringify(eggInfo));
       };
 
       await installDeps(deps);
@@ -144,58 +160,33 @@ export default ({ application }: LisaType) => {
 
       task.title = `卸载${deps}`;
 
-      const searchFile = async (dir: string, file: string): Promise<string | null> => {
-        const files = await readdir(dir);
-        for (const item of files) {
-          if (item === `${file}-egg-info`) {
-            return join(dir, item);
+      const uninstall = async (fileList: string[]): Promise<void> => {
+        for (const file of fileList) {
+          if (existsSync(file)) {
+            await unlink(file);
           }
 
-          const subDir = join(dir, item);
-          const isDirectory = lstatSync(subDir).isDirectory();
-          if (!isDirectory) {
-            continue;
-          }
-
-          const result = await searchFile(subDir, file);
-          if (result) {
-            return result;
-          }
-        }
-        return null;
-      };
-
-      const uninstall = async (file: string): Promise<void> => {
-        const subPath = file.match('/.+/');
-        const data = await (await readFile(file)).toString();
-        const pathList = data.split('\n').filter(item => item.length > 0);
-        for (const item of pathList) {
-          if (existsSync(item)) {
-            await unlink(item);
-          }
-        }
-
-        await unlink(file);
-
-        if (subPath) {
-          const subDir = subPath[0];
-          const files = await readdir(subDir);
-          if (files.length === 0) {
-            await rmdir(subDir.slice(0, subDir.length - 1));
+          const subPath = file.match('.+/');
+          if (subPath) {
+            const subDir = subPath[0].slice(0, subPath[0].length - 1);
+            const files = await readdir(subDir);
+            if (files.length === 0) {
+              await rmdir(subDir);
+            }
           }
         }
       }
 
-      const dir = join(process.cwd(), PACKAGE_PATH);
+      const { eggFilePath, eggInfo } = await readEggInfo();
 
       for (const dep of deps) {
-        const file = await searchFile(dir, dep);
-        if (file) {
-          await uninstall(file);
-        } else {
-          throw new Error(`没有找到${dep}`);
-        }
+        const fileList = eggInfo[dep].sources;
+        await uninstall(fileList);
+
+        delete eggInfo[dep];
       }
+
+      await writeFile(eggFilePath, JSON.stringify(eggInfo));
     }
   });
 }
