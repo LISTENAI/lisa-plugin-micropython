@@ -1,13 +1,13 @@
 import { job, LisaType } from '../utils/lisa_ex';
 import { join } from 'path';
-import { existsSync, lstatSync } from 'fs';
+import { existsSync } from 'fs';
 import { ParsedArgs } from 'minimist';
 import { mkdir, writeFile, readdir, unlink, readFile, rmdir } from 'fs/promises';
 import got from 'got';
 import unzip from '../utils/unzip';
 
 const PACKAGE_URL = ['https://micropython.org/pi', 'https://pypi.org/pypi'];
-const PACKAGE_PATH = 'py/_slash_lib';
+let PACKAGE_PATH = 'py/_slash_lib';
 const EGG_FILE_PATH = `${PACKAGE_PATH}/packages-egg-info`;
 
 interface EggInfo {
@@ -26,12 +26,21 @@ export default ({ application }: LisaType) => {
     }
   };
 
-  const getArgs = () => {
+  const getArgs = (): Array<{ name: string, version: string }> => {
     const argv = (application.argv as ParsedArgs)._;
     if (argv.length < 2) {
       throw new Error('请指定要安装的库名');
     }
-    return argv.slice(1, argv.length);
+    const args = argv.slice(1, argv.length);
+    const argDict: Array<{ name: string, version: string }> = [];
+    for (const arg of args) {
+      const result = arg.split('==');
+      argDict.push({
+        name: result[0],
+        version: result[1] || '*',
+      });
+    }
+    return argDict;
   };
 
   const readEggInfo = async (): Promise<{ eggFilePath: string, eggInfo: EggInfo }> => {
@@ -48,16 +57,40 @@ export default ({ application }: LisaType) => {
     async task(ctx, task) {
       check();
 
-      const deps = getArgs();
+      let deps: Array<{ name: string, version: string }> = [];
+      if (ctx['args']) {
+        deps = ctx['args'];
+        PACKAGE_PATH = ctx['path'];
+      } else {
+        deps = getArgs();
+      }
 
-      task.title = `安装${deps}`;
+      let title = '';
+      for (const dep of deps) {
+        title += `${dep.name} `;
+      }
+      task.title = `安装${title}`;
 
-      const getPackage = async (name: string): Promise<{ version: string, url: string }> => {
+      const getPackage = async (dep: { name: string, version: string }): Promise<{ version: string, url: string }> => {
         for (const url of PACKAGE_URL) {
           try {
-            const response = await got.get(`${url}/${name}/json`);
+            const response = await got.get(`${url}/${dep.name}/json`);
             const result = JSON.parse(response.body);
-            const urls = result.releases[result.info.version];
+            let version = '';
+            if (dep.version === '*') {
+              version = result.info.version;
+            } else {
+              version = dep.version.replace('*', '[0-9]+');
+              const versions: string[] = [];
+              for (const key in result.releases) {
+                if (key.match(version)) {
+                  versions.push(key);
+                }
+              }
+              version = versions[versions.length - 1];
+            }
+
+            const urls = result.releases[version];
             return {
               version: result.info.version,
               url: urls[urls.length - 1].url
@@ -66,7 +99,7 @@ export default ({ application }: LisaType) => {
           }
         }
 
-        throw new Error(`${name}不存在`);
+        throw new Error(`${dep.name} 版本 ${dep.version} 不存在`);
       };
 
       const createDirIfNotExist = async (dir: string): Promise<void> => {
@@ -97,15 +130,15 @@ export default ({ application }: LisaType) => {
        * download and save dependencies package
        * @param deps 
        */
-      const installDeps = async (deps: string[]): Promise<void> => {
+      const installDeps = async (deps: Array<{ name: string, version: string }>): Promise<void> => {
         for (const dep of deps) {
-          if (!installed.includes(dep)) {
+          if (!installed.includes(dep.name)) {
             const pkgInfo = await getPackage(dep);
 
             const data = await download(pkgInfo.url);
-            await install(data, dep, pkgInfo);
+            await install(data, dep.name, pkgInfo);
 
-            installed.push(dep);
+            installed.push(dep.name);
           }
         }
       };
@@ -140,7 +173,11 @@ export default ({ application }: LisaType) => {
            */
           if (path.match(/requires.txt/)) {
             //get dependencies
-            const deps = buffer.toString().split('\n').filter(item => item.length > 0);
+            const items = buffer.toString().split('\n').filter(item => item.length > 0);
+            const deps: Array<{ name: string, version: string }> = [];
+            for (const item of items) {
+              deps.push({ name: item, version: '*' });
+            }
             await installDeps(deps);
           }
         }
@@ -180,10 +217,10 @@ export default ({ application }: LisaType) => {
       const { eggFilePath, eggInfo } = await readEggInfo();
 
       for (const dep of deps) {
-        const fileList = eggInfo[dep].sources;
+        const fileList = eggInfo[dep.name].sources;
         await uninstall(fileList);
 
-        delete eggInfo[dep];
+        delete eggInfo[dep.name];
       }
 
       await writeFile(eggFilePath, JSON.stringify(eggInfo));
