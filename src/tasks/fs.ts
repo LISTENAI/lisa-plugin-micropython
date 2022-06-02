@@ -140,7 +140,10 @@ export default ({ application, cmd }: LisaType) => {
         throw new Error(`项目不存在: ${project}`);
       }
 
-      const resourceDir = join(project, 'py');
+      let resourceDir = join(project, 'py');
+      if (ctx.buildPath) { //specify fs resource directory, not to use default
+        resourceDir = ctx.buildPath;
+      }
       const resourceBuildDir = join(buildDir, 'resource');
       await mkdirs(resourceBuildDir);
 
@@ -161,12 +164,13 @@ export default ({ application, cmd }: LisaType) => {
       });
 
       ctx.binFile = partFile;
+      ctx.build = true; //before flash, should build fs resource
     },
   });
 
   job('fs:flash', {
     title: '资源镜像烧录',
-    before: (ctx) => [application.tasks['fs:build']],
+    before: (ctx) => ctx.build ? [application.tasks['fs:build']] : [],
     async task(ctx, task) {
       const { args, printHelp } = parseArgs(application.argv, {
         env: { arg: 'name', help: '指定当次编译有效的环境' },

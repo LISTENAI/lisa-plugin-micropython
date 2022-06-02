@@ -1,10 +1,11 @@
+import { runner } from '@listenai/lisa_core/lib/task';
 import { getBuildEnv } from '../env';
 import { job, LisaType } from '../utils/lisa_ex';
 import parseArgs from '../utils/parseArgs';
 import { flashFlags } from '../utils/westConfig';
 import { venvZepScripts } from '../venv';
 
-export default ({ application, cmd, runner }: LisaType) => {
+export default ({ application, cmd }: LisaType) => {
   job('build', {
     title: '构建',
     async task(ctx, task) {
@@ -52,7 +53,7 @@ export default ({ application, cmd, runner }: LisaType) => {
       }
 
       if (!args['firmware']) {
-        await runner('fs:flash');
+        await runner('fs:flash', { build: true });
       }
       task.title = '烧录结束';
     },

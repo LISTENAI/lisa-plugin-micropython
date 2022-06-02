@@ -5,17 +5,11 @@ import { ParsedArgs } from 'minimist';
 import { mkdir, writeFile, readdir, unlink, readFile, rmdir } from 'fs/promises';
 import got from 'got';
 import unzip from '../utils/unzip';
+import { readEggInfo } from '../utils/eggInfo';
 
 const PACKAGE_URL = ['https://micropython.org/pi', 'https://pypi.org/pypi'];
 let PACKAGE_PATH = 'py/_slash_lib';
-const EGG_FILE_PATH = `${PACKAGE_PATH}/packages-egg-info`;
-
-interface EggInfo {
-  [name: string]: {
-    version: string;
-    sources: string[];
-  }
-}
+let EGG_FILE_PATH = `${PACKAGE_PATH}/packages-egg-info`;
 
 export default ({ application }: LisaType) => {
   const check = () => {
@@ -43,24 +37,15 @@ export default ({ application }: LisaType) => {
     return argDict;
   };
 
-  const readEggInfo = async (): Promise<{ eggFilePath: string, eggInfo: EggInfo }> => {
-    const eggFilePath = join(process.cwd(), EGG_FILE_PATH);
-    let eggInfo: EggInfo = {};
-    if (existsSync(eggFilePath)) {
-      const eggData = await readFile(eggFilePath);
-      eggInfo = JSON.parse(eggData.toString());
-    }
-    return { eggFilePath, eggInfo };
-  };
-
   job('pip:install', {
     async task(ctx, task) {
       check();
 
       let deps: Array<{ name: string, version: string }> = [];
-      if (ctx['args']) {
-        deps = ctx['args'];
-        PACKAGE_PATH = ctx['path'];
+      if (ctx.args) {
+        deps = ctx.args;
+        PACKAGE_PATH = ctx.path;
+        EGG_FILE_PATH = `${PACKAGE_PATH}/packages-egg-info`;
       } else {
         deps = getArgs();
       }
@@ -80,7 +65,7 @@ export default ({ application }: LisaType) => {
             if (dep.version === '*') {
               version = result.info.version;
             } else {
-              version = dep.version.replace('*', '[0-9]+');
+              version = dep.version.replace('*', '\S');
               const versions: string[] = [];
               for (const key in result.releases) {
                 if (key.match(version)) {
@@ -122,7 +107,7 @@ export default ({ application }: LisaType) => {
         return await (await got.get(url)).rawBody;
       };
 
-      const { eggFilePath, eggInfo } = await readEggInfo();
+      const { eggFilePath, eggInfo } = await readEggInfo(EGG_FILE_PATH);
 
       const installed: string[] = [];
 
@@ -214,7 +199,7 @@ export default ({ application }: LisaType) => {
         }
       }
 
-      const { eggFilePath, eggInfo } = await readEggInfo();
+      const { eggFilePath, eggInfo } = await readEggInfo(EGG_FILE_PATH);
 
       for (const dep of deps) {
         const fileList = eggInfo[dep.name].sources;
