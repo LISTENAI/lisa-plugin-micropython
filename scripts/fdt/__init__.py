@@ -72,6 +72,7 @@ class FDT:
         self.entries = []
         self.header = Header() if header is None else header
         self.root = Node('/')
+        self.ext_nodes = []
 
     def __str__(self):
         """ String representation """
@@ -428,6 +429,8 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
         elif line.endswith('}'):
             # end node
             if curnode is not None:
+                if curnode.parent is None:
+                    fdt_obj.ext_nodes.append(curnode)
                 curnode = curnode.parent
         else:
             # properties
@@ -486,7 +489,6 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                         prop_obj.append(prop)
             if curnode is not None:
                 curnode.append(prop_obj)
-
     return fdt_obj
 
 

@@ -17,6 +17,12 @@ export interface DeviceTree {
   readonly nodes: Record<NodePath, Node>;
 }
 
+export interface FlashDesc {
+  start: number;
+  size: number;
+  partitions: FlashPartision[];
+}
+
 export type Property =
   | boolean
   | string
@@ -47,16 +53,17 @@ export interface Controller {
   data: Record<string, any>;
 }
 
-export interface FlashDesc {
+export interface FlashPartision {
   reg: [number, number];
   label: string;
+  name: string;
 }
 
 export async function findFlashInDts(
   buildDir: string,
   label: string,
   env: Record<string, string>
-): Promise<FlashDesc | null> {
+): Promise<FlashPartision | null> {
   const { stdout } = await LISA.cmd(
     'python',
     [
@@ -65,6 +72,78 @@ export async function findFlashInDts(
       resolve(buildDir, 'zephyr', 'zephyr.dts'),
       '--label',
       label,
+    ],
+    { env }
+  );
+  if (stdout == 'None') {
+    return null;
+  }
+  return JSON.parse(stdout) as FlashPartision;
+}
+
+export function generateDtOverlay(params: {
+  fsStart: number;
+  fsSize: number;
+  deleteNodes?: string[];
+}): string {
+  return `
+#include <dt-bindings/gpio/gpio.h>
+
+${
+  params.deleteNodes && params.deleteNodes.length > 0
+    ? params.deleteNodes.map((node) => `/delete-node/ &${node};`).join('\n')
+    : ''
+}
+
+/ {
+	chosen {
+		/*
+		 * shared memory reserved for the inter-processor communication
+		 */
+		zephyr,flash_sysfs_storage = &filesystem_part;
+		zephyr,flash_controller = &flash;
+	};
+	
+	fstab {
+		compatible = "zephyr,fstab";
+		lfs1: lfs1 {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/flash";
+			partition = <&filesystem_part>;
+			automount ;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	};
+};
+ 
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		filesystem_part: partition@${params.fsStart.toString(16)} {
+			label = "storage";
+			reg = <0x${params.fsStart.toString(16)} 0x${params.fsSize.toString(16)}>;
+		};
+	};
+};
+  `;
+}
+
+export async function getFlashInDts(
+  dtsPath: string,
+  env: Record<string, string>
+): Promise<FlashDesc | null> {
+  const { stdout } = await LISA.cmd(
+    'python',
+    [
+      resolve(__dirname, '..', '..', 'scripts', 'find_flash_partitions.py'),
+      '--dts',
+      dtsPath,
     ],
     { env }
   );

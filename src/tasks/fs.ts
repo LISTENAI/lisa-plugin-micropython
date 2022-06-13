@@ -2,7 +2,7 @@ import { mkdirs, pathExists, readdirSync, Stats, statSync } from 'fs-extra';
 import { basename, dirname, join, resolve } from 'path';
 import { getBuildEnv } from '../env';
 import { getCMakeCache } from '../utils/cmake';
-import { findFlashInDts, FlashDesc } from '../utils/dt';
+import { findFlashInDts, FlashDesc, FlashPartision } from '../utils/dt';
 import extendExec from '../utils/extendExec';
 import { job, LisaType } from '../utils/lisa_ex';
 import parseArgs from '../utils/parseArgs';
@@ -151,7 +151,7 @@ export default ({ application, cmd }: LisaType) => {
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 
-      const part = ctx.partition as FlashDesc;
+      const part = ctx.partition as FlashPartision;
       if (!part) {
         throw new Error(`无法找到待构建的文件系统分区`);
       }
@@ -186,7 +186,7 @@ export default ({ application, cmd }: LisaType) => {
 
       const exec = extendExec(cmd, { task, env: zepEnv });
 
-      const partition = ctx.partition as FlashDesc;
+      const partition = ctx.partition as FlashPartision;
 
       application.debug(partition);
 
