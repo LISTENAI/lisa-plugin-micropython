@@ -120,12 +120,14 @@ export default ({ application }: LisaType) => {
           if (!installed.includes(dep.name)) {
             const pkgInfo = await getPackage(dep);
 
+            task.output = `安装依赖 ${dep.name} ${pkgInfo.version}`;
             const data = await download(pkgInfo.url);
             await install(data, dep.name, pkgInfo);
 
             installed.push(dep.name);
           }
         }
+        task.output = '';
       };
 
       /**
