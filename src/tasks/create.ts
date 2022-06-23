@@ -82,6 +82,8 @@ export default (lisa: LisaType) => {
 
       await copy(join(__dirname, '../../template'), targetDir);
 
+      mkdirs(join(targetDir, 'boards'));
+
       writeFileSync(
         join(targetDir, 'boards', `${targetBoard}.overlay`),
         generateDtOverlay({
