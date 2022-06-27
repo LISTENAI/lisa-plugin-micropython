@@ -6,9 +6,29 @@ import { GitExecutorResult } from 'simple-git/dist/src/lib/types';
 import { invalidateEnv } from '../env';
 import { PLUGIN_HOME, set } from '../env/config';
 import { job, LisaType } from '../utils/lisa_ex';
+import { exec } from 'sudo-prompt';
 import parseArgs from '../utils/parseArgs';
 
 const defaultGitRepo = 'https://cloud.listenai.com/micropython/micropython.git';
+
+/**
+ * 在 Windows 上，默认 clone 可能导致无法创建软链接。
+ * 需要使用管理员权限来执行，辅以 -c core.symlinks=true 参数。
+ * @param repo git 仓库地址
+ * @param path 安装路径
+ * @returns 
+ */
+async function elevateGitClone(repo: String, path: String): Promise<void> {
+  return new Promise((resolve, reject) => {
+    exec(`git -c core.symlinks=true clone ${repo} ${path}  --depth=1`, {}, (err, stdout, stderr) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
 
 export default ({ application, cmd }: LisaType) => {
   job('use-sdk', {
@@ -93,11 +113,19 @@ export default ({ application, cmd }: LisaType) => {
               }
 
               console.log('拉取最新 SDK ...');
-              await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
+              if (process.platform === 'win32') {
+                await elevateGitClone(gitRepo, path);
+              } else {
+                await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
+              }
             }
           } else {
             console.log('拉取最新 SDK ...');
-            await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
+            if (process.platform === 'win32') {
+              await elevateGitClone(gitRepo, path);
+            } else {
+              await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
+            }
           }
 
           console.log('更新子模块 ...');
