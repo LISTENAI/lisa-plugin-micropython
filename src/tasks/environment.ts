@@ -16,17 +16,21 @@ const defaultGitRepo = 'https://cloud.listenai.com/micropython/micropython.git';
  * 需要使用管理员权限来执行，辅以 -c core.symlinks=true 参数。
  * @param repo git 仓库地址
  * @param path 安装路径
- * @returns 
+ * @returns
  */
 async function elevateGitClone(repo: String, path: String): Promise<void> {
   return new Promise((resolve, reject) => {
-    exec(`git -c core.symlinks=true clone ${repo} ${path}  --depth=1`, {}, (err, stdout, stderr) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
+    exec(
+      `git -c core.symlinks=true clone ${repo} ${path}  --depth=1`,
+      {},
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
       }
-    });
+    );
   });
 }
 
@@ -115,6 +119,12 @@ export default ({ application, cmd }: LisaType) => {
               console.log('拉取最新 SDK ...');
               if (process.platform === 'win32') {
                 await elevateGitClone(gitRepo, path);
+                await simpleGit(gitOptions).addConfig(
+                  'safe.directory',
+                  path,
+                  false,
+                  'global'
+                );
               } else {
                 await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
               }
@@ -123,6 +133,12 @@ export default ({ application, cmd }: LisaType) => {
             console.log('拉取最新 SDK ...');
             if (process.platform === 'win32') {
               await elevateGitClone(gitRepo, path);
+              await simpleGit(gitOptions).addConfig(
+                'safe.directory',
+                path,
+                false,
+                'global'
+              );
             } else {
               await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
             }
