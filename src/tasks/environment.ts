@@ -19,15 +19,43 @@ const defaultGitRepo = 'https://cloud.listenai.com/micropython/micropython.git';
  * @returns
  */
 async function elevateGitClone(repo: String, path: String): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolvePromise, reject) => {
     exec(
-      `git -c core.symlinks=true clone ${repo} ${path}  --depth=1`,
+      `powershell ${resolve(
+        __dirname,
+        '..',
+        '..',
+        'scripts',
+        'use_sdk_clone.ps1'
+      )} ${repo} ${path}`,
       {},
       (err, stdout, stderr) => {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolvePromise();
+        }
+      }
+    );
+  });
+}
+
+async function elevateGitPull(path: String): Promise<void> {
+  return new Promise((resolvePromise, reject) => {
+    exec(
+      `powershell ${resolve(
+        __dirname,
+        '..',
+        '..',
+        'scripts',
+        'use_sdk_pull.ps1'
+      )} ${path}`,
+      {},
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolvePromise();
         }
       }
     );
@@ -101,10 +129,14 @@ export default ({ application, cmd }: LisaType) => {
             console.log('SDK 路径不为空，尝试更新 SDK...');
 
             try {
-              await cmd('git', ['pull'], {
-                stdio: 'inherit',
-                cwd: path,
-              });
+              if (process.platform === 'win32') {
+                await elevateGitPull(path);
+              } else {
+                await cmd('git', ['pull'], {
+                  stdio: 'inherit',
+                  cwd: path,
+                });
+              }
             } catch (e) {
               console.log('更新失败，尝试删除文件夹...');
 
@@ -119,12 +151,6 @@ export default ({ application, cmd }: LisaType) => {
               console.log('拉取最新 SDK ...');
               if (process.platform === 'win32') {
                 await elevateGitClone(gitRepo, path);
-                await simpleGit(gitOptions).addConfig(
-                  'safe.directory',
-                  path,
-                  false,
-                  'global'
-                );
               } else {
                 await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
               }
@@ -133,45 +159,46 @@ export default ({ application, cmd }: LisaType) => {
             console.log('拉取最新 SDK ...');
             if (process.platform === 'win32') {
               await elevateGitClone(gitRepo, path);
-              await simpleGit(gitOptions).addConfig(
-                'safe.directory',
-                path,
-                false,
-                'global'
-              );
             } else {
               await simpleGit(gitOptions).clone(gitRepo, path, ['--depth=1']);
             }
           }
 
-          console.log('更新子模块 ...');
-          await cmd(
-            'git',
-            [
-              'submodule',
-              'update',
-              '--force',
-              '--init',
-              '--recursive',
-              '--depth=1',
-            ],
-            {
-              cwd: target,
-              stdio: 'inherit',
-            }
-          );
+          if (process.platform != 'win32') {
+            // Windows 在 clone 时和 pull 时都预先执行 submodule update
+            console.log('更新子模块 ...');
+            await cmd(
+              'git',
+              [
+                'submodule',
+                'update',
+                '--force',
+                '--init',
+                '--recursive',
+                '--depth=1',
+              ],
+              {
+                cwd: target,
+                stdio: 'inherit',
+              }
+            );
+          }
         } else {
           console.log('进行: 更新当前 SDK');
           console.log('拉取最新 SDK ...');
-          await cmd('git', ['pull'], {
-            stdio: 'inherit',
-            cwd: target,
-          });
-          console.log('更新子模块 ...');
-          execFileSync('git', ['submodule', 'update', '--force'], {
-            cwd: target,
-            stdio: [process.stdin, process.stdout, process.stderr],
-          });
+          if (process.platform === 'win32') {
+            await elevateGitPull(path);
+          } else {
+            await cmd('git', ['pull'], {
+              stdio: 'inherit',
+              cwd: path,
+            });
+            console.log('更新子模块 ...');
+            execFileSync('git', ['submodule', 'update', '--force'], {
+              cwd: target,
+              stdio: [process.stdin, process.stdout, process.stderr],
+            });
+          }
         }
 
         invalidateEnv();
