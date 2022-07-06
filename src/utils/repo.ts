@@ -1,4 +1,5 @@
 import simpleGit, { SimpleGit } from 'simple-git';
+import { spawnSync } from 'child_process';
 
 async function rev(git: SimpleGit): Promise<string | null> {
   let commit, branch;
@@ -22,6 +23,17 @@ async function clean(git: SimpleGit): Promise<boolean> {
 
 export async function getRepoStatus(path: string): Promise<string | null> {
   const git = simpleGit(path);
+
+  try {
+    const result = spawnSync('git',['describe'], {
+      cwd: path
+    });
+    if (result.status == 0) {
+      return result.stdout.toString().trim();
+    }
+  } catch(e) {
+
+  }
   const branch = await rev(git);
   if (!branch) {
     return null;
