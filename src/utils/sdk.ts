@@ -1,5 +1,6 @@
 import { readFile, pathExists } from 'fs-extra';
 import { join } from 'path';
+import Lisa from '@listenai/lisa_core';
 
 export async function zephyrVersion(path: string): Promise<string | null> {
   if (!(await pathExists(join(path, 'west.yml')))) {
@@ -11,6 +12,17 @@ export async function zephyrVersion(path: string): Promise<string | null> {
 
   const version = await parseVersion(join(path, 'VERSION'));
   return `${version.VERSION_MAJOR}.${version.VERSION_MINOR}.${version.PATCHLEVEL}`;
+}
+
+export async function sdkTag(path: string): Promise<string | null> {
+  try {
+    const res = await Lisa.cmd('git', ['describe', '--abbrev=0', '--tags'], {
+      cwd: path
+    });
+    return res.stdout || '';
+  } catch (error) {
+    return ''
+  }
 }
 
 export async function mpyVersion(path: string): Promise<string | null> {
